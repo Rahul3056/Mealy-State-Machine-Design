@@ -1,0 +1,62 @@
+#### **Example Verilog Code (Sequence Detector – "101")**
+```verilog
+module mealy_seq_detector(
+    input clk, rst, x,
+    output reg y
+);
+    typedef enum reg [1:0] {S0, S1, S2} state_t;
+    state_t state, next;
+
+    // State Register
+    always @(posedge clk or posedge rst) begin
+        if (rst)
+            state <= S0;
+        else
+            state <= next;
+    end
+
+    // Next State and Output Logic (Mealy style)
+    always @(*) begin
+        y = 0;
+        case(state)
+            S0: begin
+                next = x ? S1 : S0;
+                y = 0;
+            end
+            S1: begin
+                next = x ? S1 : S2;
+                y = 0;
+            end
+            S2: begin
+                next = x ? S1 : S0;
+                y = x ? 1 : 0;  // Output depends on input too
+            end
+            default: begin
+                next = S0;
+                y = 0;
+            end
+        endcase
+    end
+endmodule
+```
+
+#### **Testbench**
+```verilog
+module tb_mealy_seq_detector;
+    reg clk = 0, rst, x;
+    wire y;
+
+    mealy_seq_detector dut (.clk(clk), .rst(rst), .x(x), .y(y));
+    always #5 clk = ~clk;
+
+    initial begin
+        rst = 1; x = 0; #10; rst = 0;
+        x = 1; #10;
+        x = 0; #10;
+        x = 1; #10; // Should detect “101” here
+        x = 1; #10;
+        x = 0; #10;
+        x = 1; #10;
+        $finish;
+    end
+endmodule
